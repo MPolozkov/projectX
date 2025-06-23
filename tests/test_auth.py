@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from patres import crud
+from patres import crud, auth, schemas
 
 # Импортируем FastApi зависимости
 from fastapi import FastAPI
@@ -16,6 +16,10 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from patres.database import Base, get_db, app
+
+from patres import security
+
+from patres.models import User
 
 user = "postgres"
 password = "123"
@@ -42,39 +46,70 @@ def test_db():
         yield db
     finally:
         # Очищаем сессию и удаляем все данные из таблицы после каждого теста
-        for table in reversed(Base.metadata.sorted_tables):
-            engine.execute(table.delete())
+        with engine.connect() as connection:
+            for table in reversed(Base.metadata.sorted_tables):
+                connection.execute(table.delete())
         db.close()
 
 
 # Фикстура для клиента FastAPI  переопределением зависимостей
 @pytest.fixture()
 def client(test_db):
-    def override_get_db():
-        try:
-            yield test_db
-        finally:
-            test_db.close()
+    app.dependency_overrides = {}
 
-    app.depedency_overrides[get_db] = override_get_db()
+    def override_get_db():
+        yield test_db
+
+    app.dependency_overrides[get_db] = override_get_db
+
     client = TestClient(app)
     yield client
+
     app.dependency_overrides = {}
 
 
+from main import app
+
+
+# Создаем тестового пользователя
 def test_register_user(client: TestClient, test_db):
+    """Успешная регистрация"""
     user_data = {"email": "test@example.com", "password": "pssword123"}
-    response = client.post("/register")
+    response = client.post("/register", json=user_data)
     assert response.status_code == 200
     assert response.json()["email"] == user_data["email"]
-    users = crud.get_user_by_email(db=test_db, email=user_data["email"])
-    assert not users
 
 
-# Тест регистрации пользователя с дублирующимся email
 def test_register_user_duplicate_email(client: TestClient):
+    """Тест регистрации пользователя с дублирующимся email"""
     user_data = {"email": "test@example.com", "password": "password123"}
     client.post("/register", json=user_data)  # Регистрируем пользователя первый раз
     response = client.post("/register", json=user_data)  # Пытаемся зарегистрировать снова
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Email already registered"
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Такой пользователь уже существует"
+
+
+# Тест для входа пользователя
+def test_login_success(client: TestClient, test_db):
+    """Успешная авторизация"""
+    # Подготавливаем данные для входа
+    login_data = {"email": "test@example.com", "password": "password123"}
+    response = client.post("/login", json=login_data)
+    assert response.status_code == 200
+    assert "access_token" in response.json()
+    assert response.json()["token_type"] == "bearer"
+
+
+def test_login_incorrect_email(client: TestClient, test_db):
+    """Неверный email"""
+    login_data = {"email": "wrong@example.com", "password": "password123"}
+    response = client.post("/login", json=login_data)
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Неверный адрес электронной почты или пароль"
+
+
+def test_login_incorrect_password(client: TestClient, test_db):
+    login_data = {"email": "test@example@.com", "password": "pass123"}
+    response = client.post("/login", json=login_data)
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Неверный адрес электронной почты или пароль"

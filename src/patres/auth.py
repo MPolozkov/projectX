@@ -14,7 +14,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """Получаем данные пользователя и сессию"""
     db_user = crud.get_user_by_email(db=db, email=user.email)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Такой пользователь уже существует")
     hashed_password = security.get_password_hash(user.password)  # Хэшируем пароль пользователя
     user_data = schemas.UserCreate(email=user.email, password=hashed_password)
     # Создаем пользователя в базе данных.
@@ -28,7 +28,7 @@ def login(form_data: schemas.UserLogin, db: Session = Depends(get_db)):
     """Получаем данные формы и сессию"""
     user = crud.get_user_by_email_login(db=db, email=form_data.email)
     if not user or not security.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="incorrect email or password")
+        raise HTTPException(status_code=400, detail="Неверный адрес электронной почты или пароль")
     access_token = security.create_access_token(data={"sub": user.email})
     # response = Response(content='{"message": "Login successful"}')
     # response.headers["Authorization"] = f"Bearer {access_token}"
