@@ -1,4 +1,6 @@
 # Импортируем FastApi зависимости
+import os
+
 from fastapi import FastAPI
 
 # Импортируем SQLAlchemy для работы с бд
@@ -10,14 +12,24 @@ from sqlalchemy.orm import declarative_base
 # Импортируем сессию для работы с бд.
 from sqlalchemy.orm import sessionmaker
 
+from dotenv import load_dotenv
 
 # Создаем объект FastApi
 app = FastAPI()
 
-user = "postgres"
-password = "123"
-host = "localhost"
-database = "postgres"
+load_dotenv()
+
+# имя пользователя в бд
+user = os.getenv('user')
+
+# Пароль бд
+password = os.getenv('password')
+
+# хост на котором работает бд
+host = os.getenv('host')
+
+# Имя бд
+database = os.getenv('database')
 
 # Строка подключения к базе данных PostgresSQL
 DATABASE_URL = f"postgresql://{user}:{password}@{host}/{database}"
@@ -35,16 +47,16 @@ Base = declarative_base()
 # Вставляем модель таблицы для создания ее в бд
 
 
-    # __table_args__ = {'extend_existing': True}
+# __table_args__ = {'extend_existing': True}
 
 
 # Удаляем и пересоздаем таблицы
 # try:
-    # Base.metadata.drop_all(bind=engine)  # Удаляем только таблицу Reader
-    # Base.metadata.create_all(bind=engine)
-    # print("Таблица BorrowedBook успешно пересоздана.")
+# Base.metadata.drop_all(bind=engine)  # Удаляем только таблицу Reader
+# Base.metadata.create_all(bind=engine)
+# print("Таблица BorrowedBook успешно пересоздана.")
 # except Exception as e:
-    # print(f"Ошибка при пересоздании таблицы BorrowedBook: {e}")
+# print(f"Ошибка при пересоздании таблицы BorrowedBook: {e}")
 
 
 # Зависимость для получения сессии БД

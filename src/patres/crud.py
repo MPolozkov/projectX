@@ -1,9 +1,13 @@
+from typing import Optional, List, Type
+
 from sqlalchemy.orm import Session
 from patres import schemas, models
 from fastapi import HTTPException
 
+from patres.models import Reader, Book
 
-def create_user(db: Session, user: schemas.UserCreate):
+
+def create_user(db: Session, user: schemas.UserCreate) -> models.User:
     """Функция для создания нового библиотекаря"""
     db_user = models.User(email=user.email, hashed_password=user.password)
     db.add(db_user)
@@ -12,7 +16,7 @@ def create_user(db: Session, user: schemas.UserCreate):
     return db_user
 
 
-def get_user_by_email(db: Session, email: str):
+def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     """Функция для проверки библиотекаря по email при регистрации"""
     user = db.query(models.User).filter(models.User.email == email).first()
     if user:
@@ -20,7 +24,7 @@ def get_user_by_email(db: Session, email: str):
     return user
 
 
-def get_user_by_email_login(db: Session, email: str):
+def get_user_by_email_login(db: Session, email: str) -> Type[models.User]:
     """Функция для проверки библиотекаря по email при входе"""
     user = db.query(models.User).filter(models.User.email == email).first()
     if user:
@@ -29,7 +33,7 @@ def get_user_by_email_login(db: Session, email: str):
         raise HTTPException(status_code=404, detail="Такого пользователя не существует пройдите регистрацию")
 
 
-def create_book(db: Session, book: schemas.BookCreate):
+def create_book(db: Session, book: schemas.BookCreate) -> models.Book:
     """Функция для создания новой книги"""
     db_book = models.Book(**book.dict())  # Создаем новый объект книги, используя данные из схемы
     db.add(db_book)  # Добавляем книгу в сессию
@@ -38,12 +42,12 @@ def create_book(db: Session, book: schemas.BookCreate):
     return db_book  # Возвращаем созданную книгу
 
 
-def get_book_by_title(db: Session, book_title: str):
+def get_book_by_title(db: Session, book_title: str) -> Optional[models.Book]:
     """Функция для обновления книги"""
     return db.query(models.Book).filter(models.Book.title == book_title).first()
 
 
-def get_book_by_bd(db: Session, db_book: schemas.BookUpdate):
+def get_book_by_bd(db: Session, db_book: schemas.Book) -> models.Book:
     """Функция для обновления книги в бд"""
     db.add(db_book)  # Добавляем изменения в сессию
     db.commit()  # Фиксируем изменения в БД
@@ -51,29 +55,29 @@ def get_book_by_bd(db: Session, db_book: schemas.BookUpdate):
     return db_book  # Возвращаем обновленную книгу
 
 
-def get_books(db: Session):
+def get_books(db: Session) -> list[Type[Book]]:
     """Функция для получения списка всех книг"""
     return db.query(models.Book).all()  # Возвращаем все книги из базы данных
 
 
-def create_readers(db: Session, reader: schemas.ReaderCreate):
+def create_readers(db: Session, reader: schemas.ReaderCreate) -> models.Reader:
     """Регистрация читателя"""
-    db_reader = models.Reader(name=reader.name,
-                              surname=reader.surname,
-                              patronymic=reader.patronymic,
-                              email=reader.email)
+    db_reader = models.Reader(
+        name=reader.name, surname=reader.surname, patronymic=reader.patronymic, email=reader.email
+    )
     db.add(db_reader)
     db.commit()
     db.refresh(db_reader)
     return db_reader
 
 
-def get_reader(db: Session):
+def get_reader(db: Session) -> list[Type[Reader]]:
     """Функция для получения всех читателей"""
-    return db.query(models.Reader).all()
+    readers_get = db.query(models.Reader).all()
+    return readers_get
 
 
-def get_reader_by_email(db: Session, email: str):
+def get_reader_by_email(db: Session, email: str) -> Optional[models.Reader]:
     """Проверка читателя по email"""
     db_reader = db.query(models.Reader).filter(models.Reader.email == email).first()
     if db_reader:
@@ -81,20 +85,19 @@ def get_reader_by_email(db: Session, email: str):
     return db_reader
 
 
-def get_reader_by_one(db: Session, reader_email: str):
+def get_reader_by_one(db: Session, reader_email: str) -> Optional[models.Reader]:
     """Получение читателя по email"""
     return db.query(models.Reader).filter(models.Reader.email == reader_email).first()
 
 
-def get_reader_by_update(db: Session, reader_email: str):
+def get_reader_by_update(db: Session, reader_email: str) -> Optional[models.Reader]:
     """Функция для обновления читателя"""
     return db.query(models.Reader).filter(models.Reader.email == reader_email).first()
 
 
-def get_reader_by_bd(db: Session, reader_update: schemas.ReaderCreate):
+def get_reader_by_bd(db: Session, reader_update: schemas.Reader) -> models.Reader:
     """Функция для изменения читателя в бд"""
     db.add(reader_update)  # Добавляем изменения в сессию
     db.commit()  # Фиксируем изменения в БД
     db.refresh(reader_update)  # Обновляем объект книги из БД
     return reader_update  # Возвращаем обновленную книгу
-

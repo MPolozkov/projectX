@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -17,14 +19,14 @@ from sqlalchemy.orm import sessionmaker
 
 from patres.database import Base, get_db, app
 
-from patres import security
+from dotenv import load_dotenv
 
-from patres.models import User
+load_dotenv()
 
-user = "postgres"
-password = "123"
-host = "localhost"
-database = "postgres"
+user = os.getenv('postgres')
+password = os.getenv('password')
+host = os.getenv('localhost')
+database = os.getenv('postgres')
 
 # Строка подключения к базе данных PostgresSQL
 DATABASE_URL = f"postgresql://{user}:{password}@{host}/{database}"

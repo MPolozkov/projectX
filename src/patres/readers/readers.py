@@ -1,3 +1,6 @@
+import os
+from typing import Optional, Set
+
 from fastapi import APIRouter, Depends, HTTPException, Header
 
 from jose import jwt
@@ -5,7 +8,6 @@ from sqlalchemy.orm import Session
 from patres import crud, schemas
 from patres.database import get_db
 
-from patres.security import SECRET_KEY, ALGORITHM
 
 router = APIRouter()
 
@@ -16,12 +18,9 @@ def create_reader(reader: schemas.ReaderCreate, db: Session = Depends(get_db)):
     db_reader = crud.get_reader_by_email(db=db, email=reader.email)
     if db_reader:
         raise HTTPException(status_code=400, detail="Email already registered")
-
     reader_db = crud.create_readers(db=db, reader=reader)
-
     if not reader_db:
         raise HTTPException(status_code=500, detail="Failed to create reader")
-
     return reader_db
 
 
@@ -35,14 +34,14 @@ def read_reader(reader_email: str, db: Session = Depends(get_db)):
 
 
 @router.get("/readers/", response_model=list[schemas.ReaderGet])
-def list_readers(db: Session = Depends(get_db), token: str = Header(None)):
+def list_readers(db: Session = Depends(get_db), token: Optional[str] = Header(None)):
     """Эндпоинт для получения всех читателей"""
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.JWTError as e:
+        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
+    except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token {e}")
 
     readers_get = crud.get_reader(db=db)
@@ -50,14 +49,16 @@ def list_readers(db: Session = Depends(get_db), token: str = Header(None)):
 
 
 @router.put("/readers/{reader_email}")
-def update_reader(reader_email: str, reader: schemas.ReaderUpdate, db: Session = Depends(get_db), token: str = Header(None)):
+def update_reader(
+    reader_email: str, reader: schemas.ReaderUpdate, db: Session = Depends(get_db), token: Optional[str] = Header(None)
+):
     """Эндпоинт для редактирования читателя"""
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.JWTError as e:
+        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
+    except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token {e}")
 
     reader_update = crud.get_reader_by_update(db, reader_email=reader_email)
@@ -73,14 +74,14 @@ def update_reader(reader_email: str, reader: schemas.ReaderUpdate, db: Session =
 
 
 @router.delete("/readers/{reader_email}")
-def delete_reader(reader_email: str, db: Session = Depends(get_db), token: str = Header(None)):
+def delete_reader(reader_email: str, db: Session = Depends(get_db), token: Optional[str] = Header(None)):
     """Эндпоинт для удаления читателя из бд"""
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.JWTError as e:
+        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
+    except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token {e}")
 
     reader_email_del = crud.get_reader_by_update(db, reader_email=reader_email)
@@ -88,4 +89,4 @@ def delete_reader(reader_email: str, db: Session = Depends(get_db), token: str =
         raise HTTPException(status_code=404, detail="Читатель не найден ддя удаления")
     db.delete(reader_email_del)
     db.commit()
-    return {"message": f"Читатель {reader_email} успешно удален"}
+    return {f"Читатель {reader_email} успешно удален"}

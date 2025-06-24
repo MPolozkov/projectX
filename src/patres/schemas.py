@@ -29,7 +29,7 @@ class BookCreate(BaseModel):
     author: str  # Для автора книги
     year_of_publication: int = None  # Поле для года публикации, по умолчанию None
     isbn: str = None  # Поле для ISBN, по умолчанию None
-    copies: int = 1   # Поле для количества копий книги, по умолчанию 1
+    copies: int = 1  # Поле для количества копий книги, по умолчанию 1
 
 
 # Схема для представления книги в ответах API

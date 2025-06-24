@@ -26,7 +26,7 @@ class Book(Base):
 
 # Модель для создания нового читателя
 class Reader(Base):
-    __tablename__ = 'readers'
+    __tablename__ = "readers"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)

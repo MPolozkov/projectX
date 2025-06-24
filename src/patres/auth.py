@@ -9,7 +9,7 @@ router = APIRouter()  # Создаем новый экземпляр маршр�
 
 
 # Эндпоинт для регистрации нового библиотекаря
-@router.post("/register", response_model=schemas.User)  # Указываем путь и ожидаемую модель ответа
+@router.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """Получаем данные пользователя и сессию"""
     db_user = crud.get_user_by_email(db=db, email=user.email)
@@ -30,8 +30,5 @@ def login(form_data: schemas.UserLogin, db: Session = Depends(get_db)):
     if not user or not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Неверный адрес электронной почты или пароль")
     access_token = security.create_access_token(data={"sub": user.email})
-    # response = Response(content='{"message": "Login successful"}')
-    # response.headers["Authorization"] = f"Bearer {access_token}"
-    # {"access_token": access_token, "token_type": "bearer"}
     token = {"access_token": access_token, "token_type": "bearer"}
     return token

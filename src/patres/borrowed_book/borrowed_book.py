@@ -1,4 +1,5 @@
-from typing import List
+import os
+from typing import List, Set
 
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Header
@@ -9,20 +10,23 @@ from patres.database import get_db
 from typing import Optional, Dict, List
 from jose import jwt
 
-from patres.security import ALGORITHM, SECRET_KEY
 
 router = APIRouter()  # Создаем новый экземпляр маршрутизатора
 
 
-# Эндпоинт выдачи книги
 @router.post("/borrowed_book/")
-async def borrow_book(book_title: str, reader_email: str, db: Session = Depends(get_db), token: str = Header(None)):
+async def borrow_book(book_title: str,
+                      reader_email: str,
+                      db: Session = Depends(get_db),
+                      token: Optional[str] = Header(None)):
+
+    """Эндпоинт выдачи книги"""
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.JWTError as e:
+        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
+    except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token {e}")
 
     try:
@@ -37,47 +41,55 @@ async def borrow_book(book_title: str, reader_email: str, db: Session = Depends(
             raise HTTPException(status_code=400, detail="Доступных экземпляров этой книги нет")
 
         # Бизнес логика 2: Проверка лимита книг у читателя
-        borrowed_books = db.query(models.BorrowedBook).filter(models.BorrowedBook.reader_email == reader_email,
-                                                              models.BorrowedBook.return_date.is_(None)).count()
+        borrowed_books = (
+            db.query(models.BorrowedBook)
+            .filter(models.BorrowedBook.reader_email == reader_email, models.BorrowedBook.return_date.is_(None))
+            .count()
+        )
         if borrowed_books >= 3:
             raise HTTPException(status_code=400, detail="У вас достигнут лимит книг")
 
         # Выдача книги
         book.copies -= 1
         new_borrow = models.BorrowedBook(
-            reader_email=reader_email,
-            book_title=book_title,
-            borrow_date=datetime.now(),
-            return_date=None
+            reader_email=reader_email, book_title=book_title, borrow_date=datetime.now(), return_date=None
         )
         db.add(new_borrow)
         db.commit()
         db.refresh(book)
 
-        return {"message": "Book borrowed successfully"}
+        return {"Book borrowed successfully"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
-# Эндпоинт для возврата книг
 @router.post("/return_book")
-async def return_book(book_title: str, reader_email: str, db: Session = Depends(get_db), token: str = Header(None)):
+async def return_book(book_title: str,
+                      reader_email: str,
+                      db: Session = Depends(get_db),
+                      token: str = Header(None)):
+
+    """Эндпоинт для возврата книг"""
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
 
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.JWTError as e:
+        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
+    except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token {e}")
 
     try:
         # Находим запись о выданной книге, которую нужно вернуть
-        borrow_book = db.query(models.BorrowedBook).filter(
-            models.BorrowedBook.reader_email == reader_email,
-            models.BorrowedBook.book_title == book_title,
-            models.BorrowedBook.return_date.is_(None)
-        ).first()
+        borrow_book = (
+            db.query(models.BorrowedBook)
+            .filter(
+                models.BorrowedBook.reader_email == reader_email,
+                models.BorrowedBook.book_title == book_title,
+                models.BorrowedBook.return_date.is_(None),
+            )
+            .first()
+        )
 
         # Проверяем, найдена ли запись о выдаче книги
         if not borrow_book:
@@ -87,7 +99,6 @@ async def return_book(book_title: str, reader_email: str, db: Session = Depends(
         borrow_book.return_date = datetime.now()
 
         # Увеличиваем количество доступных экземпляров книги
-
         book = db.query(models.Book).filter(models.Book.title == book_title).first()
         if book:
             book.copies += 1
@@ -96,11 +107,9 @@ async def return_book(book_title: str, reader_email: str, db: Session = Depends(
 
         # Фиксируем изменения в базе данных
         db.commit()
-        # db.refresh(borrow_book)
 
-        return {"message": "Книга возвращена успешно"}
+        return {"Книга возвращена успешно"}
 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
-
