@@ -18,7 +18,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     hashed_password = security.get_password_hash(user.password)  # Хэшируем пароль пользователя
     user_data = schemas.UserCreate(email=user.email, password=hashed_password)
     # Создаем пользователя в базе данных.
-    user_db = crud.create_user(db=db, user=user_data)
+    user_db = crud.create_user(db=db, user=user_data, )
     return user_db
 
 
@@ -28,7 +28,7 @@ def login(form_data: schemas.UserLogin, db: Session = Depends(get_db)):
     """Получаем данные формы и сессию"""
     user = crud.get_user_by_email_login(db=db, email=form_data.email)
     if not user or not security.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Неверный адрес электронной почты или пароль")
+        raise HTTPException(status_code=400, detail="Такого пользователя не существует пройдите регистрацию")
     access_token = security.create_access_token(data={"sub": user.email})
     token = {"access_token": access_token, "token_type": "bearer"}
     return token

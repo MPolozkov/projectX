@@ -4,14 +4,14 @@ from typing import List, Set
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
-from patres import crud, schemas, models
+from patres import crud, schemas, models, security
 from sqlalchemy.orm import Session
 from patres.database import get_db
 from typing import Optional, Dict, List
 from jose import jwt
 
-
-router = APIRouter()  # Создаем новый экземпляр маршрутизатора
+# Создаем новый экземпляр маршрутизатора
+router = APIRouter()
 
 
 @router.post("/borrowed_book/")
@@ -21,13 +21,7 @@ async def borrow_book(book_title: str,
                       token: Optional[str] = Header(None)):
 
     """Эндпоинт выдачи книги"""
-    if not token:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    try:
-        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token {e}")
+    security.decode_access_token(db=db, token=token)
 
     try:
         book = db.query(models.Book).filter(models.Book.title == book_title, models.Book.copies > 0).first()
@@ -71,17 +65,11 @@ async def return_book(book_title: str,
                       token: str = Header(None)):
 
     """Эндпоинт для возврата книг"""
-    if not token:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    try:
-        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token {e}")
+    security.decode_access_token(db=db, token=token)
 
     try:
         # Находим запись о выданной книге, которую нужно вернуть
-        borrow_book = (
+        borrowed_book = (
             db.query(models.BorrowedBook)
             .filter(
                 models.BorrowedBook.reader_email == reader_email,
@@ -96,7 +84,7 @@ async def return_book(book_title: str,
             raise HTTPException(status_code=404, detail="Книга не найдена в спмске выданных или уже возвращена")
 
         # Отмечаем книгу как возвращенную
-        borrow_book.return_date = datetime.now()
+        borrowed_book.return_date = datetime.now()
 
         # Увеличиваем количество доступных экземпляров книги
         book = db.query(models.Book).filter(models.Book.title == book_title).first()

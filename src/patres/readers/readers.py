@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 
 from jose import jwt
 from sqlalchemy.orm import Session
-from patres import crud, schemas
+from patres import crud, schemas, security
 from patres.database import get_db
 
 
@@ -36,14 +36,7 @@ def read_reader(reader_email: str, db: Session = Depends(get_db)):
 @router.get("/readers/", response_model=list[schemas.ReaderGet])
 def list_readers(db: Session = Depends(get_db), token: Optional[str] = Header(None)):
     """Эндпоинт для получения всех читателей"""
-    if not token:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    try:
-        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token {e}")
-
+    security.decode_access_token(db=db, token=token)
     readers_get = crud.get_reader(db=db)
     return readers_get
 
@@ -53,13 +46,7 @@ def update_reader(
     reader_email: str, reader: schemas.ReaderUpdate, db: Session = Depends(get_db), token: Optional[str] = Header(None)
 ):
     """Эндпоинт для редактирования читателя"""
-    if not token:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    try:
-        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token {e}")
+    security.decode_access_token(db=db, token=token)
 
     reader_update = crud.get_reader_by_update(db, reader_email=reader_email)
     if not reader_update:
@@ -76,13 +63,7 @@ def update_reader(
 @router.delete("/readers/{reader_email}")
 def delete_reader(reader_email: str, db: Session = Depends(get_db), token: Optional[str] = Header(None)):
     """Эндпоинт для удаления читателя из бд"""
-    if not token:
-        raise HTTPException(status_code=401, detail="Authentication required")
-
-    try:
-        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token {e}")
+    security.decode_access_token(db=db, token=token)
 
     reader_email_del = crud.get_reader_by_update(db, reader_email=reader_email)
     if not reader_email_del:

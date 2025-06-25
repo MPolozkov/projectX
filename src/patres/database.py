@@ -44,21 +44,6 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# Вставляем модель таблицы для создания ее в бд
-
-
-# __table_args__ = {'extend_existing': True}
-
-
-# Удаляем и пересоздаем таблицы
-# try:
-# Base.metadata.drop_all(bind=engine)  # Удаляем только таблицу Reader
-# Base.metadata.create_all(bind=engine)
-# print("Таблица BorrowedBook успешно пересоздана.")
-# except Exception as e:
-# print(f"Ошибка при пересоздании таблицы BorrowedBook: {e}")
-
-
 # Зависимость для получения сессии БД
 def get_db():
     db = SessionLocal()  # Создаем новую сессию

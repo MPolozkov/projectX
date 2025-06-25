@@ -2,6 +2,10 @@ import os
 from datetime import datetime, timedelta  # Импортируем модули для работы с временем
 from jose import JWTError, jwt  # Импортируем библиотеку для работы с JWT
 from passlib.context import CryptContext  # Импортируем контекст для хеширования паролей
+from fastapi import HTTPException, Header
+from typing import Optional
+from sqlalchemy.orm import Session
+from fastapi import Depends
 
 
 # Создаем контекст для хеширования паролей с использованием bcrypt
@@ -28,3 +32,15 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode.update({"exp": expire})  # Добавляем время истечения в данные токена
     encoded_jwt = jwt.encode(to_encode, os.getenv("SECRET_KEY"), algorithm=os.getenv("ALGORITHM"))
     return encoded_jwt
+
+
+def decode_access_token(token: Optional[str] = Header(None), db: Session = None):
+    if not token:
+        raise HTTPException(status_code=404, detail="Требуется аутентификация")
+
+    try:
+        jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Неверный токен")
+    return token
+

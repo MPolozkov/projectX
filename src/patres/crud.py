@@ -30,7 +30,7 @@ def get_user_by_email_login(db: Session, email: str) -> Type[models.User]:
     if user:
         return user
     else:
-        raise HTTPException(status_code=404, detail="Такого пользователя не существует пройдите регистрацию")
+        raise HTTPException(status_code=404, detail="Неверный адрес электронной почты")
 
 
 def create_book(db: Session, book: schemas.BookCreate) -> models.Book:
@@ -39,12 +39,28 @@ def create_book(db: Session, book: schemas.BookCreate) -> models.Book:
     db.add(db_book)  # Добавляем книгу в сессию
     db.commit()  # Сохраняем изменения в базе данных
     db.refresh(db_book)  # Обновляем объект книги, чтобы получить его ID и другие данные из БД
+    raise HTTPException(status_code=200, detail="Книга успешно создана")
     return db_book  # Возвращаем созданную книгу
 
 
 def get_book_by_title(db: Session, book_title: str) -> Optional[models.Book]:
     """Функция для обновления книги"""
-    return db.query(models.Book).filter(models.Book.title == book_title).first()
+    book_title = db.query(models.Book).filter(models.Book.title == book_title).first()
+    if not book_title:
+        raise HTTPException(status_code=404, detail="Книга не найдена")
+
+    raise HTTPException(status_code=200, detail="Книга получена")
+    return book_title
+
+def get_book_by_title_delete(db: Session, book_title: str) -> Optional[models.Book]:
+    """Функция для удаления книги"""
+    book_title = db.query(models.Book).filter(models.Book.title == book_title).first()
+    if not book_title:
+        raise HTTPException(status_code=404, detail="Книга не найдена")
+    db.delete(book_title)
+    db.commit()
+    raise HTTPException(status_code=200, detail="Книга удалена")
+    return book_title
 
 
 def get_book_by_bd(db: Session, db_book: schemas.Book) -> models.Book:
@@ -57,7 +73,10 @@ def get_book_by_bd(db: Session, db_book: schemas.Book) -> models.Book:
 
 def get_books(db: Session) -> list[Type[Book]]:
     """Функция для получения списка всех книг"""
-    return db.query(models.Book).all()  # Возвращаем все книги из базы данных
+    get_books = db.query(models.Book).all()
+    raise HTTPException(status_code=200, detail="Запрос на ве книги успешен")
+    return get_books
+
 
 
 def create_readers(db: Session, reader: schemas.ReaderCreate) -> models.Reader:
