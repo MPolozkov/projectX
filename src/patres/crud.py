@@ -3,6 +3,7 @@ from typing import Optional, List, Type
 from sqlalchemy.orm import Session
 from patres import schemas, models, security
 from fastapi import HTTPException
+from datetime import datetime
 
 from patres.models import Reader, Book
 
@@ -150,6 +151,7 @@ def get_reader_by_bd(db: Session, reader_email: str, reader_update: schemas.Read
 
 
 def readers_delete(db: Session, reader_email: str) -> Optional[models.Reader]:
+    """Функция для удаления читателя"""
     db_reader = db.query(models.Reader).filter(models.Reader.email == reader_email).first()
     if not db_reader:
         raise HTTPException(status_code=404, detail="Такой читатель не найден")
@@ -157,3 +159,71 @@ def readers_delete(db: Session, reader_email: str) -> Optional[models.Reader]:
     db.commit()
     raise HTTPException(status_code=200, detail= "Пользователь удален")
     return db_reader
+
+def borrowed_book(db: Session, book_title: str, reader_email: str) -> Optional[models.BorrowedBook]:
+
+        book = db.query(models.Book).filter(models.Book.title == book_title, models.Book.copies > 0).first()
+
+        # Проверка, найдена ли книга
+        if not book:
+            raise HTTPException(status_code=404, detail="Книга не найдена.")
+
+        # Бизнес логика 1: Проверка наличия экземпляров
+        if book.copies == 0:
+            raise HTTPException(status_code=400, detail="Доступных экземпляров этой книги нет")
+
+        # Бизнес логика 2: Проверка лимита книг у читателя
+        borrowed_books = (
+            db.query(models.BorrowedBook)
+            .filter(models.BorrowedBook.reader_email == reader_email, models.BorrowedBook.return_date.is_(None))
+            .count()
+        )
+        if borrowed_books >= 3:
+            raise HTTPException(status_code=400, detail="У вас достигнут лимит книг")
+
+        # Выдача книги
+        book.copies -= 1
+        new_borrow = models.BorrowedBook(
+            reader_email=reader_email, book_title=book_title, borrow_date=datetime.now(), return_date=None
+        )
+        db.add(new_borrow)
+        db.commit()
+        db.refresh(book)
+
+        raise HTTPException(status_code=200, detail="Книга выдана")
+        return new_borrow
+
+
+def return_book(db: Session, book_title: str, reader_email: str):
+
+        # Находим запись о выданной книге, которую нужно вернуть
+        borrowed_book = (
+            db.query(models.BorrowedBook)
+            .filter(
+                models.BorrowedBook.reader_email == reader_email,
+                models.BorrowedBook.book_title == book_title,
+                models.BorrowedBook.return_date.is_(None),
+            )
+            .first()
+        )
+
+        # Проверяем, найдена ли запись о выдаче книги
+        if not borrowed_book:
+            raise HTTPException(status_code=404, detail="Книга не найдена")
+
+        # Отмечаем книгу как возвращенную
+        borrowed_book.return_date = datetime.now()
+
+        # Увеличиваем количество доступных экземпляров книги
+        book = db.query(models.Book).filter(models.Book.title == book_title).first()
+        if book:
+            book.copies += 1
+        else:
+            raise HTTPException(status_code=404, detail="Книга не найдена в базе данных")
+
+        # Фиксируем изменения в базе данных
+        db.commit()
+
+        raise HTTPException(status_code=200, detail="Книга возвращена")
+        return book
+
