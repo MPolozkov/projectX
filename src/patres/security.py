@@ -1,11 +1,10 @@
 import os
-from datetime import datetime, timedelta  # Импортируем модули для работы с временем
-from jose import JWTError, jwt  # Импортируем библиотеку для работы с JWT
-from passlib.context import CryptContext  # Импортируем контекст для хеширования паролей
+from datetime import datetime, timedelta
+from jose import jwt
+from passlib.context import CryptContext
 from fastapi import HTTPException, Header
 from typing import Optional
 from sqlalchemy.orm import Session
-from fastapi import Depends
 
 
 # Создаем контекст для хеширования паролей с использованием bcrypt

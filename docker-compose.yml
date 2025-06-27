@@ -1,0 +1,26 @@
+version: "3.8"
+services:
+  db:
+    image: postgres
+    container_name: patres_container
+    environment:
+      POSTGRES_PASSWORD: "Ваш пароль (*Должны совпадать)"
+    ports:
+      - "5432:5432" # Открываем порт для доступа к БД-SHELL", "pg_isready -U postgres"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always # Перезапускать контейнер при сбое
+
+  initdb:
+    image: postgres:latest
+    depends_on:
+      db:
+        condition: service_healthy  # Зависимость от готовности БД
+    environment:
+      POSTGRES_PASSWORD: "Ваш пароль от базы данных (* должны совпадать)"
+    # volumes:
+      # - type:
+        # ./init. (который нужно создать рядом с `docker-compose.yml`):

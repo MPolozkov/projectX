@@ -131,6 +131,23 @@ def test_read_books_get_no_token(client: TestClient):
     assert response.json()["detail"] == "Требуется аутентификация"
 
 
+def test_reader_update_success(client: TestClient, auth_token, book_title="Рассказы"):
+    """Тест для изменения книги"""
+    readers_data = {"title": "Басни",
+                    "author": "Толстов",
+                    "year_of_publication": 1478,
+                    "isbn": "8734",
+                    "copies": 4
+                    }
+    response = client.put(
+        f"/books/{book_title}",
+        headers={"token": auth_token},
+        json=readers_data
+    )
+    assert response.status_code == 200
+    assert response.json()['detail'] == "Введенная книга успешно изменена"
+
+
 # Тесты для получения одной книги по названию
 def test_read_books_one_valid_token(client: TestClient, auth_token, book_title="Рассказы"):
     """Тест с валидным токеном."""

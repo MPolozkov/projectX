@@ -3,16 +3,10 @@ import os
 import pytest
 from fastapi.testclient import TestClient
 
-# Импортируем SQLAlchemy для работы с бд
 from sqlalchemy import create_engine
 
-# Импортируем базовый класс для моделей
-from sqlalchemy.orm import declarative_base, Session
-
-# Импортируем сессию для работы с бд.
 from sqlalchemy.orm import sessionmaker
 
-from patres import schemas
 from patres.database import Base, get_db
 
 from dotenv import load_dotenv
@@ -74,7 +68,7 @@ def test_register_user(client: TestClient, test_db):
     user_data = {"email": "test@example.com", "password": "password123"}
     response = client.post("/register", json=user_data)
     assert response.status_code == 200
-    assert response.json()["email"] == user_data["email"]
+    assert response.json()["detail"] == "Библиотекарь создан"
 
 
 def test_register_user_duplicate_email(client: TestClient):

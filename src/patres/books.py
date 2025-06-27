@@ -1,9 +1,7 @@
-import os
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, Header
 
-from jose import jwt
 from sqlalchemy.orm import Session
 from patres import crud, schemas, security
 from patres.database import get_db
@@ -43,17 +41,12 @@ def update_book(
 ):
     """Эндпоинт для обновления книги"""
     security.decode_access_token(db=db, token=token)
-
-    db_book = crud.get_book_by_title(db, book_title=book_title)
-
-    for field, value in book.dict(exclude_defaults=True).items():
-        setattr(db_book, field, value)
-
+    db_book = crud.get_book_update(db, book_title=book_title, book_update=book)
     update_books = crud.get_book_by_bd(db=db, db_book=db_book)
     return update_books
 
 
-@router.delete("/delete/{book_title}")
+@router.delete("/books/{book_title}")
 def delete_book(book_title: str, db: Session = Depends(get_db), token: str = Header(None)):
     """Эндпоинт для удаления книги"""
     security.decode_access_token(db=db, token=token)
