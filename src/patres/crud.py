@@ -194,7 +194,7 @@ def borrowed_book(db: Session, book_title: str, reader_email: str) -> Optional[m
         return new_borrow
 
 
-def return_book(db: Session, book_title: str, reader_email: str):
+def return_book(db: Session, book_title: str, reader_email: str) -> Optional[models.BorrowedBook]:
 
         # Находим запись о выданной книге, которую нужно вернуть
         borrowed_book = (
